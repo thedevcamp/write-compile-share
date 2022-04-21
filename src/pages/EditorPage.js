@@ -6,6 +6,9 @@ import { Navigate, useLocation, useNavigate,useParams} from 'react-router-dom'
 import {initSocket} from '../socket'
 import { useRef } from 'react'
 import toast from 'react-hot-toast'
+import Axios from 'axios';
+
+import {Editor as EditorArea} from "@monaco-editor/react";
 const EditorPage = () => {
     const socketRef= useRef(null);
     const codeRef=useRef(null)
@@ -17,7 +20,11 @@ const EditorPage = () => {
 //         {socketId:1, username:'Anik D'},
 //         {socketId:2, username:'Soumya D'},
 ])
-
+  // State variable to set users input
+  const [userInput, setUserInput] = useState("");
+  const [userLang, setUserLang] = useState("python");
+  // State variable to set users output
+  const [userOutput, setUserOutput] = useState("");
 
     useEffect(()=> {
         const init= async()=>{
@@ -76,19 +83,26 @@ async function copyRoomId(){
 function leaveRoom(){
     reactNavigator('/');
 }
-async function submit(){
-    const axios = require('axios');
-    var code = document.getElementById('code');
-    var input= document.getElementById("input");
-    var lang=document.getElementById('lang')
-    // const response = await fetch('/editor/:roomId');
-    axios.get("/editor/:roomId", {
-        params: { code:code, input:input, lang:lang },  
-      }).then((response) => {
-        console.log(response);
-      });
-}
-  
+function compile() {
+ 
+    if (codeRef.current === ``) {
+      return
+    }
+    console.log(codeRef.current);
+    // Post request to compile endpoint
+    Axios.post(`http://localhost:5000`, {
+      code: codeRef.current,
+     
+      language: userLang,
+      input: userInput }).then((res) => {
+      setUserOutput(res.data.output);
+    })
+  }
+  function clearOutput() {
+    setUserOutput("");
+    
+  }
+ 
 
 if(!location.state){
     <Navigate to="/"/>
@@ -111,11 +125,36 @@ if(!location.state){
         <button className='btn btnLeave' onClick={leaveRoom}>Leave Room</button>
         
         </div>
-        <div className='editorWrap' id='code'>
+        <div className='editorWrap'>
 
             <Editor socketRef={socketRef} roomId={roomId} onCodeChange={(code)=> codeRef.current=code}/>
         </div>
-        <div className='input-output'>
+         <div className="input-output">
+          <h4>Input:</h4>
+          <div className="input">
+            <textarea id="code-inp" onChange=
+              {(e) => setUserInput(e.target.value)}>
+            </textarea>
+          </div>
+          <h4>Output:</h4>
+          {/* {loading ? (
+            <div className="spinner-box">
+              <img src={spinner} alt="Loading..." />
+            </div>
+          ) : ( */}
+            <div className="output-box">
+              <pre>{userOutput}</pre>
+              <button onClick={() => { clearOutput() }}
+                 className="clear-btn">
+                 Clear
+              </button>
+           
+            <button className="run-btn" onClick={() => compile()}>
+             Run
+          </button>
+          </div>
+        </div>
+        {/* <div className='input-output'>
                     <div className='lang'>
                         Language: <select name='lang' id='lang'>
                             <option value='python'>Python</option>
@@ -130,7 +169,7 @@ if(!location.state){
                     
                     <button onclick="submit">Submit</button>
                      </form>
-        </div>
+        </div> */}
     </div>
   )
 }

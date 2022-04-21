@@ -2,67 +2,53 @@ const express= require('express');
 const app=express();
 const http=require('http');
 const path = require('path');
-const bodyParser= require('bodu-parser')
-const compiler= require('compilex')
-
+var Axios = require('axios');
 
 const {Server}= require('socket.io');
 const ACTIONS= require('./src/Actions');
 const server= http.createServer(app);
 
 const io=new Server(server);
-app.use(express.static('build'));
-app.use(bodyParser);
+app.use(express.json());
+var cors = require('cors')
 
-
-var option = { stats: true };
-compiler.init(option);
-
-
-
-app.get('/edit/:roomId', (req, res) => {
-
-    const lang = req.query.lang //<-- It's here in the req.query
-    console.log(lang)
-});
-
-
-
-// app.get("/editor/:roomId", function (req, res) {
-//   res.sendfile(__dirname + "/App.js");
-// });
-
-// console.log(res.body);
-// app.post("/editor/:roomId", function (req, res) {
-//     var code = req.body.code;
-//     var input = req.body.input;
-//     var inputRadio = req.body.inputRadio;
-//     var lang = req.body.lang;
-//     if (lang === "C" || lang === "C++") {
-//       if (inputRadio === "true") {
-//         var envData = { OS: "windows", cmd: "g++", options: { timeout: 10000 } };
-//         compiler.compileCPPWithInput(envData, code, input, function (data) {
-//           if (data.error) {
-//             res.send(data.error);
-//           } else {
-//             res.send(data.output);
-//           }
-//         });
-//       } else {
-//         var envData = { OS: "windows", cmd: "g++", options: { timeout: 10000 } };
-//         compiler.compileCPP(envData, code, function (data) {
-//           res.send(data);
-//           //data.error = error message
-//           //data.output = output value
-//         });
-//       }
-//     }
-
-
-
-app.use((req,res,next)=>{
-res.sendFile(path.join(__dirname,'build','index.html'))
+app.use(cors())
+app.post("/", (req, res) => {
+    //getting the required data from the request
+    let code = req.body.code;
+    let language = req.body.language;
+    let input = req.body.input;
+    console.log(code)
+    if (language === "python") {
+        language="py"
+    }
+ 
+    let data = ({
+        "code": code,
+        "language": language,
+        "input": input
+    });
+    let config = {
+        method: 'post',
+        url: 'https://codexweb.netlify.app/.netlify/functions/enforceCode',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data: data
+    };
+    //calling the code compilation API
+    Axios(config)
+        .then((response)=>{
+            res.send(response.data)
+            console.log(response.data)
+        }).catch((error)=>{
+            console.log(error);
+        });
 })
+// app.use(express.static('build'));
+// app.use((req,res,next)=>{
+// res.sendFile(path.join(__dirname,'build','index.html'))
+// })
 const userSocketMap={}
 function getAllConnectedClients(roomId){
     return Array.from(io.sockets.adapter.rooms.get(roomId) ||[]).map((socketId)=>{
